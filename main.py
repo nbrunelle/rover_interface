@@ -1,4 +1,6 @@
-import keyboard
+# import keyboard
+from sshkeyboard import listen_keyboard
+
 import RPi.GPIO as GPIO
 import time
 GPIO.setmode(GPIO.BCM)
@@ -9,12 +11,14 @@ GPIO.setup(4,GPIO.OUT) # LEFT
 GPIO.setup(27,GPIO.OUT) # MOTOR
 GPIO.setup(26,GPIO.OUT) # MOTOR
 
-def engine():
+general_secure = True
+
+def engine(secure):
     print ('activate engine')
     GPIO.output(27,GPIO.HIGH)
-    time.sleep(1)
-    GPIO.output(27,GPIO.LOW)
-
+    if(secure):
+        time.sleep(1)
+        GPIO.output(27,GPIO.LOW)
 def forward():
     print ('trigger forward')
     GPIO.output(22,GPIO.HIGH)
@@ -23,34 +27,51 @@ def backward():
     print('trigger backward')
     GPIO.output(22,GPIO.LOW)
 
-def left():
+def left(secure):
     print('move left')
     GPIO.output(4,GPIO.HIGH)
-    time.sleep(.1)
-    GPIO.output(4,GPIO.LOW)
+    if(secure):
+        time.sleep(.1)
+        GPIO.output(4,GPIO.LOW)
 
-def right():
+def right(secure):
     print('move right')
     GPIO.output(26,GPIO.HIGH)
-    time.sleep(.1)
-    GPIO.output(26,GPIO.LOW)
-
-keyboard.on_press_key('z', lambda _:
-        engine()
-    )
-keyboard.on_press_key('a', lambda _:
-        forward()
-    )
-keyboard.on_press_key('e', lambda _:
+    if(secure):
+        time.sleep(.1)
+        GPIO.output(26,GPIO.LOW)
+    
+def press(key):
+    global general_secure
+    if(key == '!'):
+        if(general_secure == True):
+            print ('Unsafe mode activated!!!')
+            general_secure = False
+        else:
+            print('Back to safety')
+            general_secure = True
+    if(key == 'z'):
+        engine(general_secure)
+    if(key == 'a'):
         backward()
-    )
-keyboard.on_press_key('q', lambda _:
-        left()
-    )
-keyboard.on_press_key('d', lambda _:
-        right()
-    )
+    if(key == 'e'):
+        forward()
+    if(key == 'q'):
+        left(general_secure)
+    if(key == 'd'):
+        right(general_secure)
+        
+def release(key):
+    global general_secure
+    if(general_secure == False):
+        print('Everything stopped')
+        GPIO.output(27,GPIO.LOW)
+        GPIO.output(4,GPIO.LOW)
+        GPIO.output(26,GPIO.LOW)    
 
-keyboard.wait('esc')
-keyboard.unhook_all()
+listen_keyboard(
+    on_press=press,
+    on_release=release
+)
+
 print('closing')
